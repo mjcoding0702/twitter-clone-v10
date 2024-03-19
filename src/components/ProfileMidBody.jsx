@@ -1,32 +1,22 @@
 import { Button, Col, Image, Nav, Row, Spinner } from "react-bootstrap";
 import ProfilePostCard from "./ProfilePostCard";
-import { useEffect } from "react";
-import { jwtDecode } from "jwt-decode";
-import { useDispatch, useSelector } from "react-redux";
-import { fetchPostsByUser } from "../features/posts/postsSlice";
+import { useSelector } from "react-redux";
 
 export default function ProfileMidBody() {
   const url = "https://pbs.twimg.com/profile_banners/83072625/1602845571/1500x500";
   const pic = "https://pbs.twimg.com/profile_images/1587405892437221376/h167Jlb2_400x400.jpg";
 
-  const dispatch = useDispatch();
-
-  //  state.posts = { 
-  //    posts: [], 
-  //    loading: true 
-  //  }
-  // receiver
   const posts = useSelector((state) => state.posts.posts);
   const loading = useSelector((state) => state.posts.loading);
 
-  useEffect(() => {
-    const token = localStorage.getItem("authToken");
-    if (token) {
-      const decodedToken = jwtDecode(token);
-      const userId = decodedToken.id;
-      dispatch(fetchPostsByUser(userId)) //sender
-    }
-  }, [dispatch])
+  // useEffect(() => {
+  //   const token = localStorage.getItem("authToken");
+  //   if (token) {
+  //     const decodedToken = jwtDecode(token);
+  //     const userId = decodedToken.id;
+  //     dispatch(fetchPostsByUser(userId)) //sender
+  //   }
+  // }, [dispatch])
 
   return (
     <Col sm={6} className="bg-light" style={{ border: "1px solid lightgrey" }}>
