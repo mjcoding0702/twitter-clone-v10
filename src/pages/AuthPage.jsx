@@ -34,7 +34,6 @@ export default function AuthPage(){
       const res = await createUserWithEmailAndPassword(
         auth, username, password
       )
-      console.log(res.user)
     } catch (error) {
       console.error(error);
     }
@@ -56,11 +55,7 @@ export default function AuthPage(){
   const provider = new GoogleAuthProvider();
 
   const signInWithGoogle = async() => {
-    signInWithPopup(auth, provider)
-    .then((result) => {
-    }).catch((error) => {
-      console.error(error);
-    });
+    await signInWithPopup(auth, provider)
   }
 
   return (
