@@ -1,6 +1,15 @@
-import { collection, doc, getDoc, getDocs, setDoc } from "@firebase/firestore";
+import {
+  collection,
+  doc,
+  getDoc,
+  getDocs,
+  setDoc,
+  updateDoc,
+  deleteDoc,
+} from "@firebase/firestore";
 import { createAsyncThunk, createSlice } from "@reduxjs/toolkit";
-import { db } from "../../firebase";
+import { db, storage } from "../../firebase";
+import { getDownloadURL, ref, uploadBytes } from "firebase/storage";
 
 //Async thunk for fetching a user's posts
 export const fetchPostsByUser = createAsyncThunk(
@@ -27,15 +36,23 @@ export const fetchPostsByUser = createAsyncThunk(
 //Async thunk to create post
 export const savePost = createAsyncThunk(
   "posts/savePost",
-  async ({ userId, postContent }) => {
+  async ({ userId, postContent, file }) => {
     try {
+      let imageUrl = "";
+      console.log(file);
+      if (file !== null) {
+        const imageRef = ref(storage, `posts/${file.name}`);
+        const response = await uploadBytes(imageRef, file);
+        imageUrl = await getDownloadURL(response.ref);
+      }
+
       const postsRef = collection(db, `users/${userId}/posts`);
       console.log(`users/${userId}/posts`);
 
       //Since no ID is given, Firestore auto generate a unique ID for this new document
       const newPostRef = doc(postsRef);
       console.log(postContent);
-      await setDoc(newPostRef, { content: postContent, likes: [] });
+      await setDoc(newPostRef, { content: postContent, likes: [], imageUrl });
       const newPost = await getDoc(newPostRef);
 
       const post = {
@@ -44,6 +61,66 @@ export const savePost = createAsyncThunk(
       };
 
       return post;
+    } catch (error) {
+      console.error(error);
+      throw error;
+    }
+  }
+);
+
+//Async thunk to update post
+export const updatePost = createAsyncThunk(
+  "posts/updatePost",
+  async ({ userId, postId, newPostContent, newFile }) => {
+    try {
+      let newImageUrl;
+      if (newFile) {
+        const imageRef = ref(storage, `posts/${newFile.name}`);
+        const response = await uploadBytes(imageRef, newFile);
+        newImageUrl = await getDownloadURL(response.ref);
+      }
+
+      // Reference to the existing post
+      const postRef = doc(db, `users/${userId}/posts/${postId}`);
+
+      //Get the current post data
+      const postSnap = await getDoc(postRef);
+
+      if (postSnap.exists()) {
+        const postData = postSnap.data();
+
+        //Update the post content and the imageURL
+        const updatedData = {
+          ...postData,
+          content: newPostContent || postData.content,
+          imageUrl: newImageUrl || postData.imageUrl,
+        };
+
+        //Update the existing document in Firestore
+        await updateDoc(postRef, updatedData);
+
+        //Return the post with updated data
+        const updatedPost = { id: postId, ...updatedData };
+        return updatedPost;
+      }
+    } catch (error) {
+      console.error(error);
+      throw error;
+    }
+  }
+);
+
+//Async thunk to delete a post
+export const deletePost = createAsyncThunk(
+  "posts/deletePost",
+  async ({ userId, postId }) => {
+    try {
+      const postRef = doc(db, `users/${userId}/posts/${postId}`);
+
+      await deleteDoc(postRef);
+
+      //Return the ID of the deleted post
+      return postId; //action.payload
     } catch (error) {
       console.error(error);
       throw error;
@@ -81,7 +158,7 @@ export const removeLikeFromPost = createAsyncThunk(
   async ({ userId, postId }) => {
     try {
       const postRef = doc(db, `users/${userId}/posts/${postId}`);
-      const docSnap = await getDoc(postRef);
+      const docSnap = await getDoc(postRef); // get the document data
 
       if (docSnap.exists()) {
         const postData = docSnap.data();
@@ -90,7 +167,7 @@ export const removeLikeFromPost = createAsyncThunk(
         await setDoc(postRef, { ...postData, likes });
       }
 
-      return { userId, postId };
+      return { userId, postId }; //action.payload
     } catch (error) {
       console.error(error);
       throw error;
@@ -131,6 +208,24 @@ const postsSlice = createSlice({
             (id) => id !== userId
           );
         }
+      })
+      .addCase(updatePost.fulfilled, (state, action) => {
+        const updatedPost = action.payload;
+
+        // Find and update the post in the state
+        const postIndex = state.posts.findIndex(
+          (post) => post.id === updatedPost.id
+        );
+
+        if (postIndex !== -1) {
+          state.posts[postIndex] = updatedPost;
+        }
+      })
+      .addCase(deletePost.fulfilled, (state, action) => {
+        const deletedPostId = action.payload;
+
+        //Filter out the deleted post from state
+        state.posts = state.posts.filter((post) => post.id !== deletedPostId);
       });
   },
 });
