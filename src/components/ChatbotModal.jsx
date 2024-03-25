@@ -11,7 +11,7 @@ export default function ChatbotModal({ show, handleClose }) {
 
     console.log("Triggered")
     const API_URL = "https://api.openai.com/v1/chat/completions";
-    const apiKey = import.meta.env.VITE_BANANA;
+    const apiKey = import.meta.env.VITE_OPEN_AI_APIKEY;
 
     const messagesToSend = [
       ...allMessages,
